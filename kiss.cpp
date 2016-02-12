@@ -277,8 +277,16 @@ void kiss::processSerial() {
 				putRadio(&bufferSmall[1], o);
 		}
 		else if ((bufferSmall[0] & 0x0f) == 0x0f) {
-			if (!resetRadio())
+			if (!resetRadio()) {
 				debug("Reset radio failed");
+
+				for(byte i=0; i<3; i++) {
+					digitalWrite(errorLedPin, HIGH);
+					delay(250);
+					digitalWrite(errorLedPin, LOW);
+					delay(250);
+				}
+			}
 		}
 		else
 		{

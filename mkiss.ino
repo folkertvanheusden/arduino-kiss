@@ -128,11 +128,18 @@ void loop() {
 	}
 
 	static unsigned long int lastReset = 0;
-	const unsigned long int resetInterval = 121000; // every 2 min
+	const unsigned long int resetInterval = 301000; // every 5 min
 	if (now - lastReset >= resetInterval) {
 		k.debug("Reset radio");
 
-		resetRadio();
+		if (!resetRadio()) {
+			for(byte i=0; i<3; i++) {
+				digitalWrite(pinLedError, HIGH);
+				delay(250);
+				digitalWrite(pinLedError, LOW);
+				delay(250);
+			}
+		}
 
 		lastReset = now;
 	}
