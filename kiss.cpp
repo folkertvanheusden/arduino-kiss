@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "kiss.h"
 
@@ -56,7 +57,7 @@ void calc_crc_flex(const uint8_t *cp, int size, uint16_t *const crc)
 // note: it allocates 3 * maxPacketSize. so for lora devices that is 762 bytes of ram
 // most arduinos have only 2048 bytes so that is quite a bit
 // there's room for improvement here
-kiss::kiss(const uint16_t maxPacketSizeIn, uint16_t (* peekRadioIn)(), void (* getRadioIn)(uint8_t *const whereTo, uint16_t *const n), void (* putRadioIn)(const uint8_t *const what, const uint16_t size), uint16_t (*peekSerialIn)(), void (* getSerialIn)(uint8_t *const whereTo, const uint16_t n), void (*putSerialIn)(const uint8_t *const what, const uint16_t size), const uint8_t recvLedPinIn, const uint8_t sendLedPinIn, const uint8_t errorLedPinIn) : bufferBig(new uint8_t[maxPacketSizeIn * 2]), bufferSmall(new uint8_t[maxPacketSizeIn]), maxPacketSize(maxPacketSizeIn), peekRadio(peekRadioIn), getRadio(getRadioIn), putRadio(putRadioIn), peekSerial(peekSerialIn), getSerial(getSerialIn), putSerial(putSerialIn), recvLedPin(recvLedPinIn), sendLedPin(sendLedPinIn), errorLedPin(errorLedPinIn) {
+kiss::kiss(const uint16_t maxPacketSizeIn, uint16_t (* peekRadioIn)(), void (* getRadioIn)(uint8_t *const whereTo, uint16_t *const n), void (* putRadioIn)(const uint8_t *const what, const uint16_t size), uint16_t (*peekSerialIn)(), void (* getSerialIn)(uint8_t *const whereTo, const uint16_t n), void (*putSerialIn)(const uint8_t *const what, const uint16_t size), bool (* resetRadioIn)(), const uint8_t recvLedPinIn, const uint8_t sendLedPinIn, const uint8_t errorLedPinIn) : bufferBig(new uint8_t[maxPacketSizeIn * 2]), bufferSmall(new uint8_t[maxPacketSizeIn]), maxPacketSize(maxPacketSizeIn), peekRadio(peekRadioIn), getRadio(getRadioIn), putRadio(putRadioIn), peekSerial(peekSerialIn), getSerial(getSerialIn), putSerial(putSerialIn), resetRadio(resetRadioIn), recvLedPin(recvLedPinIn), sendLedPin(sendLedPinIn), errorLedPin(errorLedPinIn) {
 	debug("START");
 }
 
@@ -137,6 +138,8 @@ void kiss::processRadio(const uint16_t nBytes) {
 		setError();
 		return;
 	}
+
+	debug("recv radio");
 
 	uint16_t temp = nBytes;
 	getRadio(bufferSmall, &temp);
@@ -273,10 +276,15 @@ void kiss::processSerial() {
 			if (o > 0)
 				putRadio(&bufferSmall[1], o);
 		}
+		else if ((bufferSmall[0] & 0x0f) == 0x0f) {
+			if (!resetRadio())
+				debug("Reset radio failed");
+		}
 		else
 		{
-			debug("error frame != data");
-			setError();
+			char err[64];
+			snprintf(err, sizeof err, "frame type %02x unk", bufferSmall[0]);
+			debug(err);
 		}
 	}
 }

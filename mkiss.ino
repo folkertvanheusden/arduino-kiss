@@ -12,6 +12,7 @@
 #define pinLedRecv 4
 #define pinLedSend 5
 #define pinLedHB 6
+#define pinReset 7
 
 // this is an example implementation using a "RadioHead"-driver for
 // RF95 radio (a LoRa device).
@@ -58,8 +59,36 @@ void putSerial(const uint8_t *const what, const uint16_t size) {
 	Serial.write(what, size);
 }
 
+bool initRadio() {
+	if (rf95.init()) {
+		delay(100);
+
+		digitalWrite(pinLedRecv, LOW);
+		digitalWrite(pinLedSend, LOW);
+		digitalWrite(pinLedError, LOW);
+		digitalWrite(pinLedHB, LOW);
+
+		rf95.setFrequency(869.525);
+		rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
+		rf95.setTxPower(20); // radiohead default is 13
+
+		return true;
+	}
+
+	return false;
+}
+
+bool resetRadio() {
+	digitalWrite(pinReset, LOW);
+	delay(1); // at least 100us, this is 1000us
+	digitalWrite(pinReset, HIGH);
+	delay(5 + 1); // 5ms is required
+
+	return initRadio();
+}
+
 // LoRa device can have a packetsize of 254 bytes
-kiss k(254, peekRadio, getRadio, putRadio, peekSerial, getSerial, putSerial, pinLedRecv, pinLedSend, pinLedError);
+kiss k(254, peekRadio, getRadio, putRadio, peekSerial, getSerial, putSerial, resetRadio, pinLedRecv, pinLedSend, pinLedError);
 
 void setup() {
 	// the arduino talks with 9600bps to the linux system
@@ -74,20 +103,15 @@ void setup() {
 	pinMode(pinLedHB, OUTPUT);
 	digitalWrite(pinLedHB, HIGH);
 
-	if (rf95.init()) {
-		delay(100);
-
-		digitalWrite(pinLedRecv, LOW);
-		digitalWrite(pinLedSend, LOW);
-		digitalWrite(pinLedError, LOW);
-		digitalWrite(pinLedHB, LOW);
-
-		rf95.setFrequency(869.525);
-		rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
-		rf95.setTxPower(20); // radiohead default is 13
-	}
+	pinMode(pinReset, OUTPUT);
+	digitalWrite(pinReset, HIGH);
 
 	k.begin();
+
+	if (!resetRadio())
+		k.debug("Radio init failed");
+
+	k.debug("Go!");
 }
 
 void loop() {
@@ -101,5 +125,15 @@ void loop() {
 		digitalWrite(pinLedHB, state ? HIGH : LOW);
 		state = !state;
 		pHB = now;
+	}
+
+	static unsigned long int lastReset = 0;
+	const unsigned long int resetInterval = 121000; // every 2 min
+	if (now - lastReset >= resetInterval) {
+		k.debug("Reset radio");
+
+		resetRadio();
+
+		lastReset = now;
 	}
 }
