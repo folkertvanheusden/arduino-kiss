@@ -1,18 +1,28 @@
-// this software is (C) 2016 by folkert@vanheusden.com
+// this software is (C) 2016-2022 by folkert@vanheusden.com
 // AGPL v3.0
 
 #include "kiss.h"
 
-#include <SPI.h>
+#include <RadioHead.h>
 #include <RH_RF95.h> // LoRa device
 
 // as debugging via serial is not possible (it is used for the kiss
 // protocol), I use a couple of LEDs
+//#define USE_LEDS
+
+#ifdef USE_LEDS
 #define pinLedError 3
-#define pinLedRecv 4
-#define pinLedSend 5
-#define pinLedHB 6
-#define pinReset 7
+#define pinLedRecv  4
+#define pinLedSend  5
+#define pinLedHB    6
+#else
+#define pinLedError 255
+#define pinLedRecv  255
+#define pinLedSend  255
+#define pinLedHB    255
+#endif
+
+#define pinReset    7
 
 // this is an example implementation using a "RadioHead"-driver for
 // RF95 radio (a LoRa device).
@@ -63,10 +73,12 @@ bool initRadio() {
 	if (rf95.init()) {
 		delay(100);
 
+#ifdef USE_LEDS
 		digitalWrite(pinLedRecv, LOW);
 		digitalWrite(pinLedSend, LOW);
 		digitalWrite(pinLedError, LOW);
 		digitalWrite(pinLedHB, LOW);
+#endif
 
 		rf95.setFrequency(869.525);
 		rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
@@ -94,6 +106,7 @@ void setup() {
 	// the arduino talks with 9600bps to the linux system
 	Serial.begin(9600);
 
+#ifdef USE_LEDS
 	pinMode(pinLedRecv, OUTPUT);
 	digitalWrite(pinLedRecv, HIGH);
 	pinMode(pinLedSend, OUTPUT);
@@ -102,6 +115,7 @@ void setup() {
 	digitalWrite(pinLedError, HIGH);
 	pinMode(pinLedHB, OUTPUT);
 	digitalWrite(pinLedHB, HIGH);
+#endif
 
 	pinMode(pinReset, OUTPUT);
 	digitalWrite(pinReset, HIGH);
@@ -122,7 +136,9 @@ void loop() {
 
 	if (now - pHB >= 500) {
 		static bool state = true;
+#ifdef USE_LEDS
 		digitalWrite(pinLedHB, state ? HIGH : LOW);
+#endif
 		state = !state;
 		pHB = now;
 	}
@@ -134,10 +150,12 @@ void loop() {
 
 		if (!resetRadio()) {
 			for(byte i=0; i<3; i++) {
+#ifdef USE_LEDS
 				digitalWrite(pinLedError, HIGH);
 				delay(250);
 				digitalWrite(pinLedError, LOW);
 				delay(250);
+#endif
 			}
 		}
 

@@ -1,4 +1,4 @@
-// this software is (C) 2016 by folkert@vanheusden.com
+// this software is (C) 2016-2022 by folkert@vanheusden.com
 // AGPL v3.0
 
 #include <stdint.h>
