@@ -8,9 +8,9 @@
 
 // as debugging via serial is not possible (it is used for the kiss
 // protocol), I use a couple of LEDs
-//#define USE_LEDS
+#define USE_LEDS 0
 
-#ifdef USE_LEDS
+#if USE_LEDS == 1
 #define pinLedError 3
 #define pinLedRecv  4
 #define pinLedSend  5
@@ -80,9 +80,13 @@ bool initRadio() {
 		digitalWrite(pinLedHB, LOW);
 #endif
 
-		rf95.setFrequency(869.525);
-		rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
-		rf95.setTxPower(20); // radiohead default is 13
+		rf95.setFrequency(869.525);	  // you may want to adjust this
+
+	        rf95.setSpreadingFactor(12);      // spread factor 12
+		rf95.setSignalBandwidth(125000);  // Bw = 125 kHz
+		rf95.setCodingRate4(5);           // Cr = 4/5
+		rf95.setPayloadCRC(true);         // CRC on
+		rf95.setTxPower(20, false);
 
 		return true;
 	}
@@ -91,10 +95,12 @@ bool initRadio() {
 }
 
 bool resetRadio() {
+#ifdef USE_LEDS
 	digitalWrite(pinReset, LOW);
 	delay(1); // at least 100us, this is 1000us
 	digitalWrite(pinReset, HIGH);
 	delay(5 + 1); // 5ms is required
+#endif
 
 	return initRadio();
 }
