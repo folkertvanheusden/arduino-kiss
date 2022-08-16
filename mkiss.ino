@@ -57,7 +57,6 @@ void getRadio(uint8_t *const whereTo, uint16_t *const n) {
 void putRadio(const uint8_t *const what, const uint16_t size) {
 	heartbeat();
 	rf95.send(what, size);
-	heartbeat();
 	rf95.waitPacketSent();
 	heartbeat();
 }
