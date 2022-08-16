@@ -8,8 +8,6 @@
 
 #include "kiss.h"
 
-unsigned long int ledOn = 0;
-
 static const PROGMEM unsigned short crc_flex_table[] = {
 	0x0f87, 0x1e0e, 0x2c95, 0x3d1c, 0x49a3, 0x582a, 0x6ab1, 0x7b38,
 	0x83cf, 0x9246, 0xa0dd, 0xb154, 0xc5eb, 0xd462, 0xe6f9, 0xf770,
@@ -93,10 +91,8 @@ void put_byte(uint8_t *const out, uint16_t *const offset, const uint8_t c)
 }
 
 void kiss::setError() {
-	if (errorLedPin != 0xff) {
+	if (errorLedPin != 0xff)
 		digitalWrite(errorLedPin, HIGH);
-		ledOn = millis();
-	}
 }
 
 // FIXME combine with processRadio
@@ -140,16 +136,14 @@ void kiss::debug(const char *const t) {
 }
 
 void kiss::processRadio(const uint16_t nBytes) {
-	if (recvLedPin != 0xff) {
-		digitalWrite(recvLedPin, HIGH);
-		ledOn = millis();
-	}
-
 	if (nBytes > maxPacketSize * 2) {
 		debug("error packet size");
 		setError();
 		return;
 	}
+
+	if (recvLedPin != 0xff)
+		digitalWrite(recvLedPin, HIGH);
 
 	debug("recv radio");
 
@@ -175,16 +169,17 @@ void kiss::processRadio(const uint16_t nBytes) {
 	bufferBig[o++] = FEND;
 
 	putSerial(bufferBig, o);
+
+	if (recvLedPin != 0xff)
+		digitalWrite(recvLedPin, LOW);
 }
 
 // when a byte comes in via serial, it is expected that a full kiss
 // packet comes in. this method waits for that with a timeout of
 // 2 seconds
 void kiss::processSerial() {
-	if (sendLedPin != 0xff) {
+	if (sendLedPin != 0xff)
 		digitalWrite(sendLedPin, HIGH);
-		ledOn = millis();
-	}
 
 	bool first = true, ok = false, escape = false;
 
@@ -295,11 +290,10 @@ void kiss::processSerial() {
 				for(byte i=0; i<3; i++) {
 					if (errorLedPin != 0xff) {
 						digitalWrite(errorLedPin, HIGH);
-						delay(250);
+						delay(100);
 						digitalWrite(errorLedPin, LOW);
+						delay(100);
 					}
-
-					delay(250);
 				}
 			}
 		}
@@ -310,6 +304,9 @@ void kiss::processSerial() {
 			debug(err);
 		}
 	}
+
+	if (sendLedPin != 0xff)
+		digitalWrite(sendLedPin, LOW);
 }
 
 void kiss::loop() {
@@ -320,15 +317,4 @@ void kiss::loop() {
 	bool serialIn = peekSerial();
 	if (serialIn)
 		processSerial();
-
-	const unsigned long int now = millis();
-	if (ledOn && now - ledOn > 100) {
-		if (errorLedPin != 0xff)
-			digitalWrite(errorLedPin, LOW);
-		if (recvLedPin != 0xff)
-			digitalWrite(recvLedPin, LOW);
-		if (sendLedPin != 0xff)
-			digitalWrite(sendLedPin, LOW);
-		ledOn = 0;
-	}
 }
