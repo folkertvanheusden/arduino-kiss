@@ -114,6 +114,18 @@ void kiss::debug(const char *const t) {
 	bufferBig[o] = 0x20; // FLEXNET
 	calc_crc_flex(&bufferBig[o++], 1, &crc);
 
+	const uint8_t ax25header[] = {
+		'I' << 1, 'D' << 1, 'E' << 1, 'N' << 1, 'T' << 1, ' ' << 1, ('0' << 1) | 1,  // TO
+		'D' << 1, 'E' << 1, 'B' << 1, 'U' << 1, 'G' << 1, ' ' << 1, ('0' << 1) | 1,  // FROM
+                0x03,  // UI frame
+		0xf0,  // no layer 3
+	};
+
+	calc_crc_flex(ax25header, sizeof ax25header, &crc);
+
+	for(uint8_t i=0; i<sizeof ax25header; i++)
+		put_byte(bufferBig, &o, ax25header[i]);
+
 	calc_crc_flex(bufferSmall, nBytes, &crc);
 
 	for(uint16_t i=0; i<nBytes; i++)
